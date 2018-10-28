@@ -11,9 +11,14 @@ import cv2 as cv
 import numpy as np
 import os 
 import math 
-
 #import matplotlib.pyplot as plt 
-
+'''
+from skimage import data,io
+#scikit  learn  
+from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.externals import joblib
+'''
 # hog feature GET 
 '''
 读入彩色图像，并转换为灰度值图像, 获得图像的宽和高。
@@ -88,20 +93,24 @@ def cell_gradient(cell_magnitude, cell_angle):
         for j in range(cell_magnitude.shape[1]):
             gradient_strength = cell_magnitude[i][j]#梯度值
             gradient_angle = cell_angle[i][j]#angle value 
-            min_angle = int(gradient_angle / angle_unit)%8# 8 is not necissary
-            max_angle = (min_angle + 1) % bin_size
-            mod = gradient_angle % angle_unit
+            min_angle = int(gradient_angle / angle_unit)%8# 8 is not necissary  角度所属的index
+            max_angle = (min_angle + 1) % bin_size#紧邻的下一个角度区间index
+            mod = gradient_angle % angle_unit#区间内的偏移量
+            #幅值按照区间内的偏移量权重进行累加至直方图中
             orientation_centers[min_angle] += (gradient_strength * (1 - (mod / angle_unit)))
             orientation_centers[max_angle] += (gradient_strength * (mod / angle_unit))
     return orientation_centers
-            
+
+#遍历每一个CELL的梯度 直方图，并保存 to cell_gradient_vector
 for i in range(cell_gradient_vector.shape[0]):
     for j in range(cell_gradient_vector.shape[1]):
+        # get cell's magnitude and angle 
         cell_magnitude = gradient_magnitude[i * cell_size:(i + 1) * cell_size,
                          j * cell_size:(j + 1) * cell_size]
         cell_angle = gradient_angle[i * cell_size:(i + 1) * cell_size,
                      j * cell_size:(j + 1) * cell_size]
         #print(cell_angle.max())
+        #get cell's 的梯度方向直方图
         cell_gradient_vector[i][j] = cell_gradient(cell_magnitude, cell_angle)
         
 '''
@@ -139,8 +148,15 @@ for i in range(cell_gradient_vector.shape[0] - 1):
         block_vector.extend(cell_gradient_vector[i][j + 1])
         block_vector.extend(cell_gradient_vector[i + 1][j])
         block_vector.extend(cell_gradient_vector[i + 1][j + 1])
-        mag = lambda vector: math.sqrt(sum(i ** 2 for i in vector))
-        magnitude = mag(block_vector)
+        '''
+        由于局部光照的变化以及前景-背景对比度的变化，
+        使得梯度强度的变化范围非常大。这就需要对梯度强度做归一化。
+        归一化能够进一步地对光照、阴影和边缘进行压缩。
+        L2-norm 归一化方法：   v/sqrt(sum(x**x))
+        lambda function :a = lambda arg1,arg1...:opration ; a is lambda funtion 's point 
+        '''
+        mag = lambda vector: math.sqrt(sum(i**i for i in vector))#lambda function define ,mag is a function 
+        magnitude = mag(block_vector)#
         if magnitude != 0:
             normalize = lambda block_vector, magnitude: [element / magnitude for element in block_vector]
             block_vector = normalize(block_vector, magnitude)
