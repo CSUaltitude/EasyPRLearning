@@ -7,7 +7,8 @@ use sklearn lib
 @author: zhouwei
 """
 import cv2 
-from sklearn.svm import LinearSVC
+#from sklearn.svm import LinearSVC
+from sklearn import svm
 import numpy as np
 import os 
 def calcFeatVec(features,centers):#get eachimg feature vector 
@@ -86,8 +87,8 @@ BOW modulle
 2---利用K-Means算法构造单词表
 3---是利用单词表的中词汇表示图像
 '''
-desfinal = np.vstack((des,des1))
-print(np.array(desfinal).shape)#sift feature combine  利用SIFT算法，从每类图像中提取视觉词汇，将所有的视觉词汇集合
+#desfinal = np.vstack((des,des1))
+#print(np.array(desfinal).shape)#sift feature combine  利用SIFT算法，从每类图像中提取视觉词汇，将所有的视觉词汇集合
 
 '''
 -利用K-Means算法构造单词表
@@ -207,22 +208,88 @@ def GetDesBowVec(des,centers):
     return desbowvec
 
 
+
+des1 = GetImgSiftFeature("test/no") 
+
 '''
 #利用SIFT算法，从每类图像中提取视觉词汇，将所有的视觉词汇集合 GetImgSiftFeature
 '''
-des0 = GetImgSiftFeature("HOGRawImg") 
+des0 = GetImgSiftFeature("train/has") 
+des1 = GetImgSiftFeature("train/no") 
 '''
 #利用K-Means算法构造单词表 GetSiftKmeanCenters
 '''
-centors = GetSiftKmeanCenters(des0,50)
+des = np.vstack((des0,des1))
+centors = GetSiftKmeanCenters(des,50)
 '''
 #是利用单词表的中词汇表示图像 GetDesBowVec
 '''
-filefeature = GetDesBowVec(des0,centors)
+filefeature0 = GetDesBowVec(des0,centors)
+filefeature1 = GetDesBowVec(des1,centors)
+
+
+
+
+'''
+train data get 
+'''
+x = np.vstack((filefeature0,filefeature1))### train data 
+
+y0 = np.ones((filefeature0.shape[0],1))###train data
+y1 = np.zeros((filefeature1.shape[0],1))
+y = np.vstack((y0,y1))
+y = np.array(y).ravel()
 
 print(des0.shape)
+print(des1.shape)
 print(centors.shape)
-print(np.array(filefeature).shape)
+print(filefeature0.shape)#has 
+print(filefeature1.shape)#no 
+print(y0.shape)
+print(y1.shape)
+
+'''
+test data get 
+'''
+'''
+def GetInputFeature(filepath,centors):
+    des = GetImgSiftFeature(filepath) 
+    feature = GetDesBowVec(des,centors)
+    return feature
+'''
+des0 = GetImgSiftFeature("test/has") 
+des1 = GetImgSiftFeature("test/no") 
+
+test0 = GetDesBowVec(des0,centors)
+test1 = GetDesBowVec(des1,centors)
+test = np.vstack((test0,test1))#test data 
+print(test0.shape)
+print(test1.shape)
+
+tlabel0 = np.ones((test0.shape[0],1))###test data label 
+tlabel1 = np.zeros((test1.shape[0],1))
+tlabel = np.vstack((tlabel0,tlabel1))
+
+tlabel = np.array(tlabel).ravel()#y should be list 
+
+print(tlabel0.shape)
+print(tlabel1.shape)
+
+#next train svm with sift 
+from sklearn.svm import SVC
+
+clf = SVC(gamma='auto')
+clf.fit(x,y)
+cnt =0
+for i in range(test.shape[0]):
+    x = np.array(test[i,:]).reshape(1,-1)#sklearn need 2D array 
+    if clf.predict(x) == tlabel[i]:
+        cnt += 1
+print(cnt/np.float(test.shape[0]))
+
+
+
+
 
 
 
