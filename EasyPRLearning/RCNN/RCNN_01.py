@@ -111,11 +111,37 @@ net = tflearn.fully_connected(net, 2, activation='softmax')
 net = tflearn.regression(net)
 '''
 #define nn 
+
+traindata = data[:1000]
+trainlabel = label[:1000]
+testdata = data[1001:]
+testlabel = label[1001:]
 model = tflearn.DNN(net)
+'''
+model.fit(traindata, trainlabel, n_epoch=10, batch_size=16, show_metric=True)
+model.save('titanic_model.tflearn')
+'''
 
-model.fit(data, label, n_epoch=10, batch_size=16, show_metric=True)
+model.load("titanic_model.tflearn")
 
 
+#pred = model.predict([testdata[0]])
+#print(pred)
+
+
+cnt = 0.0
+result = []
+for i in range(len(testdata)):
+    pred = model.predict([testdata[i]])
+    if pred[0][1] > 0.5:
+        result.append(1)
+    else:
+        result.append(0)
+    if result[i] == testlabel[i][1]:
+        cnt+=1
+accurace = np.float32(cnt)/len(testdata)
+
+print("accurace is ",accurace)
 
 
 
